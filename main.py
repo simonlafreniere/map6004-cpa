@@ -13,9 +13,14 @@ def main():
     print("mean:\n" + str(mean))
     mean_matrice = Matrices.substract_mean(matrice)
     print("mean matrice:\n" + str(mean_matrice))
-    covariance_matrice = Matrices.covariance_matrix(mean_matrice)
-    print("covariance:\n" + str(covariance_matrice))
-    t = ""
+
+    transposee = mean_matrice.Transposee()
+    AAT = transposee * mean_matrice  # l'ordre est inverse car on veut que les colonnes de la matrice soit les categories (agr, min, man..)
+    covariances = AAT / (mean_matrice.colonnes - 1)  # S = AAT/n-1
+    print("covariances (S):\n" + str(covariances))
+    eigenvalues, U = Matrices.Jacobi(covariances)
+    print("lambdas (eigenvalues):\n" + str(eigenvalues))
+    print("U (eigenvectors):\n" + str(U))
 
 
 if __name__ == "__main__":

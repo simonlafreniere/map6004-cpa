@@ -1,6 +1,7 @@
 from numbers import Number
 import random as rd
 import time
+import numpy as np
 
 
 class Matrice:
@@ -434,20 +435,6 @@ def substract_mean(matrice):
     return matrice - mean_matrice(matrice)
 
 
-# nb colonnes = colonnes!/((colonnes-2)!*2), chaque paire de correlation 1 a 1..
-def covariance_matrix(matrice):  # expected mean matrice
-    cov_matrice = []
-    for i in range(matrice.lignes):
-        row = []
-        for j in range(matrice.colonnes - 1):
-            for k in range(j + 1, matrice.colonnes):
-                row.append(matrice.matrice[i][j] * matrice.matrice[i][k])
-        cov_matrice.append(row)
-    result = Matrice(matrice.lignes, len(cov_matrice[0]))
-    result.matrice = cov_matrice
-    return result
-
-
 def Identite(dimension):
     reponse = Matrice(dimension)
     for i in range(dimension):
@@ -541,3 +528,59 @@ def StringFormatParenthesageMinimal(l, i, j):
         reponse += StringFormatParenthesageMinimal(l, l[i][j], j)
         reponse += ")"
         return reponse
+
+
+def Jacobi(A):
+    if not A.estCarree():
+        raise ValueError('La matrice doit etre carree..')
+    n = A.colonnes  # matrice carree
+    maxit = 100  # nombre d'iterations maximal
+    eps = 1.0e-15  # niveau d'acuitee
+    pi = np.pi
+    ev = Matrice(1, n)  # initialisation des eigenvalues
+    U = Matrice(n)  # initialisation des eigenvector
+    for i in range(0, n):
+        U.matrice[i][i] = 1.0
+
+    for t in range(0, maxit):
+        s = 0  # compute sum of off-diagonal elements in A(i,j)
+        for i in range(0, n):
+            s = s + np.sum(np.abs(A.matrice[i][(i + 1):n]))
+        if s < eps:  # diagonal form reached
+            for i in range(0, n):
+                ev.matrice[0][i] = A.matrice[i][i]
+            break
+        else:
+            limit = s / (n * (n - 1) / 2.0)  # average value of off-diagonal elements
+            for i in range(0, n - 1):  # loop over lines of matrix
+                for j in range(i + 1, n):  # loop over columns of matrix
+                    if np.abs(A.matrice[i][j]) > limit:  # determine (ij) such that |A(i,j)| larger than average
+                        # value of off-diagonal elements
+                        denom = A.matrice[i][i] - A.matrice[j][j]  # denominator of Eq. (3.61)
+                        if np.abs(denom) < eps:
+                            phi = pi / 4  # Eq. (3.62)
+                        else:
+                            phi = 0.5 * np.arctan(2.0 * A.matrice[i][j] / denom)  # Eq. (3.61)
+                        si = np.sin(phi)
+                        co = np.cos(phi)
+                        for k in range(i + 1, j):
+                            store = A.matrice[i][k]
+                            A.matrice[i][k] = A.matrice[i][k] * co + A.matrice[k][j] * si  # Eq. (3.56)
+                            A.matrice[k][j] = A.matrice[k][j] * co - store * si  # Eq. (3.57)
+                        for k in range(j + 1, n):
+                            store = A.matrice[i][k]
+                            A.matrice[i][k] = A.matrice[i][k] * co + A.matrice[j][k] * si  # Eq. (3.56)
+                            A.matrice[j][k] = A.matrice[j][k] * co - store * si  # Eq. (3.57)
+                        for k in range(0, i):
+                            store = A.matrice[k][i]
+                            A.matrice[k][i] = A.matrice[k][i] * co + A.matrice[k][j] * si
+                            A.matrice[k][j] = A.matrice[k][j] * co - store * si
+                        store = A.matrice[i][i]
+                        A.matrice[i][i] = A.matrice[i][i] * co * co + 2.0 * A.matrice[i][j] * co * si + A.matrice[j][j] * si * si  # Eq. (3.58)
+                        A.matrice[j][j] = A.matrice[j][j] * co * co - 2.0 * A.matrice[i][j] * co * si + store * si * si  # Eq. (3.59)
+                        A.matrice[i][j] = 0.0  # Eq. (3.60)
+                        for k in range(0, n):
+                            store = U.matrice[k][j]
+                            U.matrice[k][j] = U.matrice[k][j] * co - U.matrice[k][i] * si  # Eq. (3.66)
+                            U.matrice[k][i] = U.matrice[k][i] * co + store * si  # Eq. (3.67)
+    return ev, U
